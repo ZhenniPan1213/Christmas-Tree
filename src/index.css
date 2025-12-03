@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 全局样式重置 */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  /* 设置极暗的背景，配合 App 中的 Canvas */
+  background-color: #000000; 
+  color: #ffffff;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden; /* 防止出现滚动条 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 确保 Canvas 容器占满全屏 */
+#root {
+  width: 100%;
+  height: 100%;
+}
