@@ -1,55 +1,61 @@
 // src/App.tsx
+import { useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Environment, Sparkles, ContactShadows, OrbitControls } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import { GestureProvider } from './components/GestureContext';
 import { WebcamGestureManager } from './components/WebcamGestureManager';
 import { LuxuryTree } from './components/LuxuryTree';
+import { UIOverlay } from './components/UIOverlay';
 
 export default function App() {
+  // 创建 Video 元素的引用
+  const videoRef = useRef<HTMLVideoElement>(null);
+
   return (
     <GestureProvider>
       <div className="w-full h-screen bg-black relative overflow-hidden">
 
-        {/* 隐藏的 AI 摄像头组件 */}
-        <WebcamGestureManager />
+        {/* --- 1. 摄像头监控窗口 (右上角) --- */}
+        <video
+          ref={videoRef}
+          className="absolute top-6 right-6 w-48 rounded-lg border-2 border-[#FFD700]/50 shadow-[0_0_20px_rgba(255,215,0,0.3)] z-50 object-cover scale-x-[-1]"
+          // scale-x-[-1] 用于水平翻转镜像，让互动更自然
+          autoPlay
+          muted
+          playsInline
+        />
 
-        {/* UI 提示层 */}
-        <div className="absolute top-8 w-full text-center z-10 pointer-events-none select-none px-4">
-          <h1 className="text-5xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-[#FFD700] to-[#B8860B] drop-shadow-md font-serif">
-            LUXURY MEMORIES
+        {/* --- 2. 隐藏的逻辑控制器 --- */}
+        <WebcamGestureManager videoRef={videoRef} />
+
+        {/* --- 3. UI 状态显示 (右下角) --- */}
+        <UIOverlay />
+
+        {/* --- 4. 顶部标题 --- */}
+        <div className="absolute top-8 left-8 z-10 pointer-events-none select-none">
+          <h1 className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-[#FFD700] to-[#B8860B] drop-shadow-md font-serif">
+            LUXURY <br /> MEMORIES
           </h1>
-          <div className="mt-4 flex justify-center gap-4 text-[#FFD700] text-sm uppercase tracking-widest font-semibold">
-            <span className="bg-black/40 px-3 py-1 rounded border border-[#FFD700]/30">🖐️ 张开分散</span>
-            <span className="bg-black/40 px-3 py-1 rounded border border-[#FFD700]/30">✊ 握拳聚合</span>
-            <span className="bg-black/40 px-3 py-1 rounded border border-[#FFD700]/30">↔️ 手掌移动</span>
-          </div>
         </div>
 
+        {/* --- 5. 3D 场景 --- */}
         <Canvas
           shadows
-          camera={{ position: [0, 0, 8], fov: 45 }}
+          camera={{ position: [0, 0, 9], fov: 45 }}
           gl={{ antialias: false }}
           dpr={[1, 1.5]}
         >
-          {/* 灯光系统 */}
-          <ambientLight intensity={0.4} />
-          <spotLight position={[10, 10, 10]} angle={0.2} penumbra={1} intensity={15} castShadow color="#FFD700" />
-          <pointLight position={[-10, -5, -10]} intensity={5} color="#004225" />
+          <ambientLight intensity={0.2} />
+          <spotLight position={[10, 10, 10]} angle={0.2} penumbra={1} intensity={10} castShadow color="#FFD700" />
 
-          {/* 核心 3D 内容 */}
           <LuxuryTree />
 
-          {/* 氛围粒子 */}
-          <Sparkles count={400} scale={15} size={3} speed={0.5} opacity={0.6} color="#FFD700" />
-
-          {/* 底部阴影 */}
+          {/* 增加粒子密度，营造梦幻感 */}
+          <Sparkles count={500} scale={15} size={2} speed={0.5} opacity={0.5} color="#FFD700" />
           <ContactShadows resolution={1024} scale={25} blur={2} opacity={0.6} far={10} color="#000000" />
-
-          {/* 环境反射贴图 (让金属有质感) */}
           <Environment preset="city" />
 
-          {/* 相机控制 (限制只能稍微旋转，主要靠手势) */}
           <OrbitControls
             enablePan={false}
             enableZoom={false}
@@ -57,9 +63,9 @@ export default function App() {
             maxPolarAngle={Math.PI / 1.8}
           />
 
-          {/* 电影级后期处理 */}
-          <EffectComposer enableNormalPass>
-            <Bloom luminanceThreshold={1} mipmapBlur intensity={1.2} radius={0.5} />
+          <EffectComposer>
+            {/* 辉光：阈值设为1，只有自发光的彩球和高光部分会发光 */}
+            <Bloom luminanceThreshold={1} mipmapBlur intensity={1.5} radius={0.6} />
             <Vignette eskil={false} offset={0.1} darkness={1.1} />
           </EffectComposer>
         </Canvas>

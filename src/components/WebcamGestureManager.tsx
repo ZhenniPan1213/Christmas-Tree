@@ -1,10 +1,14 @@
 // src/components/WebcamGestureManager.tsx
-import { useEffect, useRef } from "react";
+import { useEffect, RefObject } from "react";
 import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
 import { useGesture } from "./GestureContext";
 
-export const WebcamGestureManager = () => {
-  const videoRef = useRef<HTMLVideoElement>(document.createElement("video"));
+// 接收外部传入的 videoRef
+interface Props {
+  videoRef: RefObject<HTMLVideoElement>;
+}
+
+export const WebcamGestureManager = ({ videoRef }: Props) => {
   const { setGesture } = useGesture();
 
   useEffect(() => {
@@ -25,12 +29,18 @@ export const WebcamGestureManager = () => {
           numHands: 1,
         });
 
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { width: 640, height: 480 } 
+        // 获取摄像头流
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 640, height: 480 }
         });
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-        videoRef.current.onloadeddata = () => predict();
+
+        // 将流绑定到传入的 video 元素上
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+          // 等待数据加载后开始预测
+          videoRef.current.onloadeddata = () => predict();
+        }
       } catch (err) {
         console.error("Camera Error:", err);
       }
@@ -43,28 +53,21 @@ export const WebcamGestureManager = () => {
         if (results.landmarks.length > 0) {
           const landmarks = results.landmarks[0];
           const wrist = landmarks[0];
-          const fingertips = [4, 8, 12, 16, 20]; // 指尖索引
-          
-          // --- 算法：判断握拳 ---
-          // 计算指尖到手腕的平均距离
+          const fingertips = [4, 8, 12, 16, 20];
+
           let avgDist = 0;
           for (const tip of fingertips) {
-              const dx = landmarks[tip].x - wrist.x;
-              const dy = landmarks[tip].y - wrist.y;
-              avgDist += Math.sqrt(dx*dx + dy*dy);
+            const dx = landmarks[tip].x - wrist.x;
+            const dy = landmarks[tip].y - wrist.y;
+            avgDist += Math.sqrt(dx * dx + dy * dy);
           }
           avgDist /= fingertips.length;
-          // 阈值：< 0.25 视为握拳 (聚合)，否则视为张开 (分散)
-          const isFist = avgDist < 0.25;
 
-          // --- 算法：判断左右移动 ---
-          // wrist.x 范围是 0-1。0.5是中间。
-          // 我们将其反转并映射到 -1 到 1 的范围
-          const xPos = (0.5 - wrist.x) * 3.5; 
+          const isFist = avgDist < 0.25;
+          const xPos = (0.5 - wrist.x) * 3.5;
 
           setGesture(isFist, xPos);
         } else {
-          // 没手的时候：默认分散，居中
           setGesture(false, 0);
         }
       }
@@ -74,13 +77,14 @@ export const WebcamGestureManager = () => {
     setup();
 
     return () => {
+      // 清理工作
       if (videoRef.current && videoRef.current.srcObject) {
         (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
       }
       if (handLandmarker) handLandmarker.close();
       cancelAnimationFrame(animationFrameId);
     };
-  }, [setGesture]);
+  }, [setGesture, videoRef]);
 
   return null;
 };
